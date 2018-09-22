@@ -201,6 +201,9 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+	/* Check for higher priority threads, and run if exists */
+	thread_yield();
+	
   return tid;
 }
 
@@ -331,11 +334,22 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+/* JYK retruns true if thread1's priority is higher than thread2's (using list_eleme) */
+bool
+priority_compare(struct list_elem *thread1_elem, struct list_elem *thread2_elem, void *aux)
+{	
+	struct thread *thread1 = list_entry(thread1_elem, struct thread, elem);
+	struct thread *thread2 = list_entry(thread2_elem, struct thread, elem);
+	return thread1->priority > thread2->priority;
+}
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  thread_current ()->init_priority = new_priority;
+	reset_donation();
+	thread_yield();
 }
 
 /* Returns the current thread's priority. */
@@ -344,6 +358,75 @@ thread_get_priority (void)
 {
   return thread_current ()->priority;
 }
+
+/*If target thread has lower priority, donates priority to thread*/
+void
+thread_donate_priority(struct thread *target)
+{
+	if(thread_current ()->priority > target->priority)
+	{
+		target->priority = thread_current ()->priority;
+	}
+}
+
+/* Search if there are other donations to be done when lock is released */
+void
+reset_donation()
+{
+	ASSERT(thread_current()->magic == THREAD_MAGIC);
+	struct list_elem *e;
+	struct lock *l;
+	int next_priority = 0;
+	int compare_priority;
+	if(list_empty(&thread_current()->lock_list))
+	{
+		thread_current()->priority = thread_current()->init_priority;
+	}
+	else
+	{
+		e = list_begin(&thread_current()->lock_list);
+		while(e != list_end(&thread_current()->lock_list))
+		{
+			l = list_entry(e, struct lock, lock_elem);
+			compare_priority = list_max_priority(&(l->semaphore.waiters));
+			if(compare_priority > next_priority)
+			{
+				next_priority = compare_priority;
+			}
+			e = list_next(e);
+		}
+		if(next_priority > thread_current()->init_priority)
+		{
+			thread_current()->priority = next_priority;
+		}
+		else
+		{
+			thread_current()->priority = thread_current()->init_priority;
+		}
+	}
+}
+
+/* Return biggest priority in given list */
+int
+list_max_priority(struct list *thread_list)
+{
+	ASSERT(thread_list != NULL);
+	struct list_elem *e = list_begin(thread_list);
+	struct thread *t;
+	int ret_priority = 0;
+	while(e != list_end(thread_list))
+	{
+		t = list_entry(e, struct thread, elem);
+		if(t->priority > ret_priority)
+		{
+			ret_priority = t->priority;
+		}
+		e = list_next(e);
+	}
+
+	return ret_priority;
+}
+
 
 /* Sets the current thread's nice value to NICE. */
 void
@@ -462,7 +545,9 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+	t->init_priority = priority;
   t->magic = THREAD_MAGIC;
+	list_init(&t->lock_list);
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -493,7 +578,11 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
+	{	
+		/* Sorts list so that thread with higher priortiy is first */
+		list_sort(&ready_list, priority_compare, 0);
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
+	}
 }
 
 /* Completes a thread switch by activating the new thread's page
