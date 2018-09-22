@@ -580,7 +580,7 @@ next_thread_to_run (void)
   else
 	{	
 		/* Sorts list so that thread with higher priortiy is first */
-		list_sort(&ready_list, priority_compare, 0);
+		list_sort(&ready_list, priority_compare, NULL);
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
 	}
 }
