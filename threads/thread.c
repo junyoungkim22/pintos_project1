@@ -336,8 +336,9 @@ thread_foreach (thread_action_func *func, void *aux)
 
 /* Retruns true if thread1's priority is lower than thread2's (using list_eleme) */
 bool
-priority_compare(struct list_elem *thread1_elem, struct list_elem *thread2_elem, void *aux)
+priority_compare(const struct list_elem *thread1_elem, const struct list_elem *thread2_elem, void *aux)
 {	
+	(void) aux;  //supress warning for unused parameter
 	struct thread *thread1 = list_entry(thread1_elem, struct thread, elem);
 	struct thread *thread2 = list_entry(thread2_elem, struct thread, elem);
 	return thread1->priority < thread2->priority;
@@ -392,7 +393,6 @@ reset_donation()
 	struct list_elem *e;
 	struct lock *l;
 	int next_priority = 0;
-	int compare_priority;
 	struct thread *compare_thread;
 	struct list_elem *max;
 	if(list_empty(&thread_current()->lock_list))

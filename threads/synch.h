@@ -37,6 +37,7 @@ struct condition
     struct list waiters;        /* List of waiting threads. */
   };
 
+bool sema_elem_priority_compare(const struct list_elem *sema_list_elem1, const struct list_elem *sema_list_elem2, void *aux);
 void cond_init (struct condition *);
 void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);

@@ -251,7 +251,6 @@ lock_release (struct lock *lock)
   lock->holder = NULL;
 	list_remove(&lock->lock_elem);
 	reset_donation();
-	//list_sort(&lock->semaphore.waiters, priority_compare, NULL);
   sema_up (&lock->semaphore);
 }
 
@@ -325,8 +324,9 @@ cond_wait (struct condition *cond, struct lock *lock)
 
 /* Returns true if sema_elem1 has lower holder priority than sema_elem2. */
 bool
-sema_elem_priority_compare(struct list_elem *sema_list_elem1, struct list_elem *sema_list_elem2)
+sema_elem_priority_compare(const struct list_elem *sema_list_elem1, const struct list_elem *sema_list_elem2, void *aux)
 {
+	(void) aux;
 	struct semaphore_elem *sema_elem1 = list_entry(sema_list_elem1, struct semaphore_elem, elem);
 	struct semaphore_elem *sema_elem2 = list_entry(sema_list_elem2, struct semaphore_elem, elem);
 	return sema_elem1->holder_priority < sema_elem2->holder_priority;
