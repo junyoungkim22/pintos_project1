@@ -360,12 +360,27 @@ thread_get_priority (void)
 }
 
 /*If target thread has lower priority, donates priority to thread*/
+/*
 void
 thread_donate_priority(struct thread *target)
 {
 	if(thread_current ()->priority > target->priority)
 	{
 		target->priority = thread_current ()->priority;
+	}
+}
+*/
+void
+thread_donate_priority(struct thread *src, struct thread *dst)
+{
+	src->donate_target = dst;
+	if(src->priority > dst->priority)
+	{
+		dst->priority = src->priority;
+		if(dst->donate_target != NULL)
+		{
+			thread_donate_priority(dst, dst->donate_target);
+		}
 	}
 }
 
@@ -530,6 +545,7 @@ init_thread (struct thread *t, const char *name, int priority)
 	t->init_priority = priority;
   t->magic = THREAD_MAGIC;
 	list_init(&t->lock_list);
+	t->donate_target = NULL;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

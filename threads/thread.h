@@ -90,6 +90,7 @@ struct thread
     int priority;                       /* Priority. */
     int init_priority;			/* JYK original priority */
     struct list lock_list;		/* List of locks thread currently has */
+		struct thread *donate_target;   /* Thread the thread is donating to */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
@@ -133,10 +134,10 @@ typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
 
 bool priority_compare(struct list_elem *thread1_elem, struct list_elem *thread2_elem, void *aux);
+void thread_donate_priority(struct thread *src, struct thread *dst);
 int thread_get_priority (void);
 void thread_set_priority (int);
 void reset_donation(void);
-struct thread *list_max_priority(struct list *thread_list);
 
 int thread_get_nice (void);
 void thread_set_nice (int);

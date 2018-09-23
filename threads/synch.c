@@ -204,12 +204,13 @@ lock_acquire (struct lock *lock)
 		
 	if(lock->holder != NULL)
 	{
-		thread_donate_priority(lock->holder);
+		thread_donate_priority(thread_current(), lock->holder);
 	}
 	
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 	list_push_back(&thread_current()->lock_list, &lock->lock_elem);
+	thread_current()->donate_target = NULL;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
