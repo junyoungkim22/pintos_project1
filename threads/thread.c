@@ -390,7 +390,6 @@ reset_donation()
 		while(e != list_end(&thread_current()->lock_list))
 		{
 			l = list_entry(e, struct lock, lock_elem);
-			//compare_priority = list_max_priority(&(l->semaphore.waiters));
 			max = list_max(&(l->semaphore.waiters), priority_compare, NULL);
 			compare_thread = list_entry(max, struct thread, elem);
 			if(compare_thread->priority > next_priority)
@@ -408,29 +407,6 @@ reset_donation()
 			thread_current()->priority = thread_current()->init_priority;
 		}
 	}
-}
-
-/* Return thread with biggest priority in given list */
-struct thread *
-list_max_priority(struct list *thread_list)
-{
-	ASSERT(thread_list != NULL);
-	struct list_elem *e = list_begin(thread_list);
-	struct thread *t;
-	//int ret_priority = 0;
-	struct thread *ret = list_entry(e, struct thread, elem);
-	while(e != list_end(thread_list))
-	{
-		t = list_entry(e, struct thread, elem);
-		if(t->priority > ret->priority)
-		{
-			ret = t;
-		}
-		e = list_next(e);
-	}
-
-	//return ret_priority;
-	return ret;
 }
 
 
@@ -586,14 +562,10 @@ next_thread_to_run (void)
   else
 	{	
 		/* Sorts list so that thread with higher priortiy is first */
-		//list_sort(&ready_list, priority_compare, NULL);
     //return list_entry (list_pop_front (&ready_list), struct thread, elem);
-		//struct thread *ret = list_max_priority(&ready_list);
 		struct list_elem *max = list_max(&ready_list, priority_compare, NULL);
 		list_remove(max);
-		//list_remove(ret);
 		return list_entry(max, struct thread, elem);
-		//return list_max_priority(&ready_list);
 	}
 }
 
