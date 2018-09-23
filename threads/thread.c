@@ -334,7 +334,7 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
-/* JYK retruns true if thread1's priority is lower than thread2's (using list_eleme) */
+/* Retruns true if thread1's priority is lower than thread2's (using list_eleme) */
 bool
 priority_compare(struct list_elem *thread1_elem, struct list_elem *thread2_elem, void *aux)
 {	
