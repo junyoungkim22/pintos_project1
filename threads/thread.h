@@ -24,6 +24,8 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+#define NO_WAKE_TIME 0
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -96,6 +98,9 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+		struct list_elem sleep_elem;        /* List element in sleep list */
+		int64_t wake_time;                  /* Wake time of sleeping thread */
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -132,6 +137,10 @@ void thread_yield (void);
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
+
+bool wake_time_compare(const struct list_elem *thread1_elem, const struct list_elem *thread2_elem, void *aux);
+void thread_sleep(int64_t wake_time);
+void thread_wake(void);
 
 bool priority_compare(const struct list_elem *thread1_elem, const struct list_elem *thread2_elem, void *aux);
 void thread_donate_priority(struct thread *src, struct thread *dst);

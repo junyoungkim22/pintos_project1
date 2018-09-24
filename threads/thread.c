@@ -28,6 +28,12 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+/* List of all sleeping threads */
+static struct list sleep_list;
+
+/* Nearest wake time of sleeping threads */
+static int64_t nearest_wake_time;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -92,6 +98,8 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+	list_init (&sleep_list);
+
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -123,6 +131,8 @@ void
 thread_tick (void) 
 {
   struct thread *t = thread_current ();
+	int64_t current_ticks = timer_ticks();
+	enum intr_level old_level;
 
   /* Update statistics. */
   if (t == idle_thread)
@@ -133,6 +143,14 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
+
+	/* Wake sleeping threads that have slept enough */
+	if(current_ticks >= nearest_wake_time && nearest_wake_time != NO_WAKE_TIME)
+	{
+		old_level = intr_disable();
+		thread_wake();
+		intr_set_level(old_level);
+	}
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -332,6 +350,59 @@ thread_foreach (thread_action_func *func, void *aux)
       struct thread *t = list_entry (e, struct thread, allelem);
       func (t, aux);
     }
+}
+
+/* Returns true if thread1's wake_time is smaller than thread2's wake time */
+bool
+wake_time_compare(const struct list_elem *thread1_elem, const struct list_elem *thread2_elem, void *aux)
+{	
+	(void) aux;  //supress warning for unused parameter
+	struct thread *thread1 = list_entry(thread1_elem, struct thread, sleep_elem);
+	struct thread *thread2 = list_entry(thread2_elem, struct thread, sleep_elem);
+	return thread1->wake_time < thread2->wake_time;
+}
+
+/* Sets up conditions so that current thread can sleep. Only called from timer_sleep */
+void 
+thread_sleep(int64_t wake_time)
+{
+	thread_current()->wake_time = wake_time;
+	list_insert_ordered(&sleep_list, &thread_current()->sleep_elem, wake_time_compare, NULL);
+	if(wake_time < nearest_wake_time || nearest_wake_time == NO_WAKE_TIME)
+	{
+		nearest_wake_time = wake_time;
+	}
+	thread_block();
+}
+
+/* Wakes up sleeping threads whose times are up */
+void 
+thread_wake()
+{
+	struct list_elem *e;
+	struct thread *t;
+	while(!list_empty(&sleep_list))
+	{
+		e = list_pop_front(&sleep_list);
+		t = list_entry(e, struct thread, sleep_elem);
+		if(nearest_wake_time >= t->wake_time)
+			thread_unblock(t);
+		else
+		{
+			list_push_front(&sleep_list, e);
+			break;
+		}
+	}
+	if(list_empty(&sleep_list))
+	{
+		nearest_wake_time = NO_WAKE_TIME;
+	}
+	else
+	{
+		e = list_front(&sleep_list);
+		t = list_entry(e, struct thread, sleep_elem);
+		nearest_wake_time = t->wake_time;
+	}
 }
 
 /* Retruns true if thread1's priority is lower than thread2's (using list_eleme) */
