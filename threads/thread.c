@@ -361,16 +361,6 @@ thread_get_priority (void)
 }
 
 /*If target thread has lower priority, donates priority to thread*/
-/*
-void
-thread_donate_priority(struct thread *target)
-{
-	if(thread_current ()->priority > target->priority)
-	{
-		target->priority = thread_current ()->priority;
-	}
-}
-*/
 void
 thread_donate_priority(struct thread *src, struct thread *dst)
 {
