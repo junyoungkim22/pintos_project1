@@ -1,3 +1,5 @@
+#include "threads/fp-cal.h"
+
 int int2fp(int n){
 	return n*FP;
 }

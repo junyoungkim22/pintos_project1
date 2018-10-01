@@ -101,6 +101,9 @@ struct thread
 		struct list_elem sleep_elem;        /* List element in sleep list */
 		int64_t wake_time;                  /* Wake time of sleeping thread */
 
+		int nice;
+		int recent_cpu;
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -152,5 +155,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+void thread_calc_priority(void);
+void calc_load_avg(void);
 
 #endif /* threads/thread.h */

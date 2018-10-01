@@ -67,6 +67,10 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
+/* Load average used in mlfqs */
+int load_avg;
+static struct list mlfqs_ready_list[64];
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -101,6 +105,14 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
 	list_init (&sleep_list);
+
+	if(thread_mlfqs)
+	{
+		for(int i = 0; i < 64; i++)
+		{
+			list_init(&mlfqs_ready_list[i]);
+		}
+	}
 
 
   /* Set up a thread structure for the running thread. */
@@ -260,7 +272,14 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+	if(!thread_mlfqs) 
+	{
+  	list_push_back (&ready_list, &t->elem);
+	}
+	else
+	{
+		list_push_back (&mlfqs_ready_list[thread_get_priority()], &t->elem);
+	}
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -490,9 +509,10 @@ reset_donation()
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int new_nice) 
 {
-  /* Not yet implemented. */
+	thread_current()->nice = new_nice;
+	thread_calc_priority();
 }
 
 /* Returns the current thread's nice value. */
@@ -517,6 +537,33 @@ thread_get_recent_cpu (void)
 {
   /* Not yet implemented. */
   return 0;
+}
+
+void
+thread_calc_priority(void)
+{
+	int fp_pri_max = int2fp(PRI_MAX);
+	int fp_recent_cpu = int2fp(thread_current()->recent_cpu);
+	int fp_nice = int2fp(thread_current()->nice);
+	int fp_recent_cpu_div4 = fp_int_div(fp_recent_cpu, 4);
+	int fp_nice_div2 = fp_int_div(fp_nice, 2);
+	int sub_sum = fp_add(fp_recent_cpu_div4, fp_nice_div2);
+	thread_current()->priority = fp2int(fp_sub(fp_pri_max, sub_sum));
+	thread_yield();
+}
+
+void
+calc_load_avg(void)
+{
+	int ready_threads = 0;
+	for(int i = 0; i < 64; i++)
+	{
+		ready_threads += list_size(&mlfqs_ready_list[i]);
+	}
+	int fp_mul_num = fp_int_div(int2fp(59), 60);
+	int fp_a = fp_int_mul(int2fp(ready_threads), load_avg);
+	int fp_b = fp_int_div(int2fp(ready_threads), 60);
+	load_avg = fp2int_round(fp_add(fp_a, fp_b));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -609,6 +656,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
 	list_init(&t->lock_list);
 	t->donate_target = NULL;
+	t->recent_cpu = 0;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
