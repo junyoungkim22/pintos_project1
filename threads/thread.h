@@ -102,7 +102,7 @@ struct thread
 		int64_t wake_time;                  /* Wake time of sleeping thread */
 
 		int nice;
-		int recent_cpu;
+		int fp_recent_cpu;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -155,7 +155,9 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-void thread_calc_priority(void);
+void thread_calc_priority(struct thread *t, void *aux);
 void calc_load_avg(void);
+void thread_calc_recent_cpu(struct thread *t, void *aux);
+void reinsert_priority(int);
 
 #endif /* threads/thread.h */

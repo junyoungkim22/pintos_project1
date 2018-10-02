@@ -1,5 +1,6 @@
 #include<stdint.h>
-#define FP 1 << 14
+//#define FP 1 << 14
+//const int F_P = (1 << 14);
 
 int int2fp(int n);
 
