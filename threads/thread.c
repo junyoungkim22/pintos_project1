@@ -140,13 +140,14 @@ thread_start (void)
 }
 
 /* Called by the timer interrupt handler at each timer tick.
+:q
    Thus, this function runs in an external interrupt context. */
 void
 thread_tick (void) 
 {
   struct thread *t = thread_current ();
 	int64_t current_ticks = timer_ticks();
-	enum intr_level old_level;
+	//enum intr_level old_level;
 
   /* Update statistics. */
   if (t == idle_thread)
@@ -161,30 +162,35 @@ thread_tick (void)
 	/* Wake sleeping threads that have slept enough */
 	if(current_ticks >= nearest_wake_time && nearest_wake_time != NO_WAKE_TIME)
 	{
-		old_level = intr_disable();
+		//old_level = intr_disable();
 		thread_wake();
-		intr_set_level(old_level);
+		//intr_set_level(old_level);
 	}
 
 	if(thread_mlfqs)
 	{
-		old_level = intr_disable();
+		//old_level = intr_disable();
 		thread_current()->fp_recent_cpu = fp_int_add(thread_current()->fp_recent_cpu, 1);
 		if(current_ticks % TIMER_FREQ == 0)
 		{
 			calc_load_avg();
 			thread_foreach(thread_calc_recent_cpu, NULL);
+			/*
 			thread_foreach(thread_calc_priority, NULL);
+			
 			for(int i = 0; i < 64; i++)
 			{
 				reinsert_priority(i);
 			}
+			*/
+			
 		}
-		if(current_ticks % 4 == 0)
+		if(current_ticks % 4 == 3)
 		{
-			thread_calc_priority(thread_current(), NULL);
+			thread_foreach(thread_calc_priority, NULL);
+			//thread_calc_priority(thread_current(), NULL);
 		}
-		intr_set_level(old_level);
+		//intr_set_level(old_level);
 	}
 
   /* Enforce preemption. */
@@ -293,6 +299,8 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
+	list_push_back(&ready_list, &t->elem);
+	/*
 	if(!thread_mlfqs) 
 	{
   	list_push_back (&ready_list, &t->elem);
@@ -301,6 +309,7 @@ thread_unblock (struct thread *t)
 	{
 		list_push_back (&mlfqs_ready_list[thread_get_priority()], &t->elem);
 	}
+	*/
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -372,7 +381,8 @@ thread_yield (void)
   old_level = intr_disable ();
   if (cur != idle_thread) 
 	{
-    //list_push_back (&ready_list, &cur->elem);
+    list_push_back (&ready_list, &cur->elem);
+		/*
 		if(!thread_mlfqs) 
 		{
  		 	list_push_back (&ready_list, &cur->elem);
@@ -381,6 +391,7 @@ thread_yield (void)
 		{
 			list_push_back (&mlfqs_ready_list[thread_get_priority()], &cur->elem);
 		}
+		*/
 	}
   cur->status = THREAD_READY;
   schedule ();
@@ -433,15 +444,20 @@ thread_wake()
 {
 	struct list_elem *e;
 	struct thread *t;
+	e = list_begin(&sleep_list);
 	while(!list_empty(&sleep_list))
 	{
-		e = list_pop_front(&sleep_list);
+		//e = list_pop_front(&sleep_list);
 		t = list_entry(e, struct thread, sleep_elem);
 		if(nearest_wake_time >= t->wake_time)
+		{
 			thread_unblock(t);
+			e = list_next(e);
+			list_pop_front(&sleep_list);
+		}
 		else
 		{
-			list_push_front(&sleep_list, e);
+			//list_push_front(&sleep_list, e);
 			break;
 		}
 	}
@@ -576,8 +592,8 @@ thread_calc_priority(struct thread *t, void *aux)
 	int fp_recent_cpu = t->fp_recent_cpu;
 	int fp_nice = int2fp(t->nice);
 	int fp_recent_cpu_div4 = fp_int_div(fp_recent_cpu, 4);
-	int fp_nice_div2 = fp_int_div(fp_nice, 2);
-	int sub_sum = fp_add(fp_recent_cpu_div4, fp_nice_div2);
+	int fp_nice_mul2 = fp_int_mul(fp_nice, 2);
+	int sub_sum = fp_add(fp_recent_cpu_div4, fp_nice_mul2);
 	int new_priority = fp2int(fp_sub(fp_pri_max, sub_sum));
 	if(new_priority < PRI_MIN)
 	{
@@ -596,16 +612,26 @@ thread_calc_priority(struct thread *t, void *aux)
 		list_push_back(&mlfqs_ready_list[t->priority], &t->elem);
 	}
 	*/
+	/*
+	if(t->status == THREAD_READY)
+	{
+		list_remove(&t->elem);
+		list_push_back(&mlfqs_ready_list[t->priority], &t->elem);
+	}
+	*/
 }
 
 void
 calc_load_avg(void)
 {
 	int ready_threads = 0;
+	/*
 	for(int i = 0; i < 64; i++)
 	{
 		ready_threads += list_size(&mlfqs_ready_list[i]);
 	}
+	*/
+	ready_threads += list_size(&ready_list);
 	if(thread_current() != idle_thread)
 	{
 		ready_threads++;  //include current running thread
@@ -618,6 +644,7 @@ calc_load_avg(void)
 
 void thread_calc_recent_cpu(struct thread *t, void *aux)
 {
+	(void) aux;
 	int fp_mul_num = fp_div(2*fp_load_avg, fp_int_add(2*fp_load_avg, 1));
 	t->fp_recent_cpu = fp_int_add(fp_mul(t->fp_recent_cpu, fp_mul_num), t->nice);
 }
@@ -765,6 +792,7 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
+	/*
 	if(thread_mlfqs)
 	{
 		for(int i = 63; i >= 0; i--)
@@ -776,6 +804,7 @@ next_thread_to_run (void)
 		}
 		return idle_thread;
 	}
+	*/
 
   if (list_empty (&ready_list))
     return idle_thread;

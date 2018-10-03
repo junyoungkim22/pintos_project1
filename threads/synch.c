@@ -253,7 +253,10 @@ lock_release (struct lock *lock)
 
   lock->holder = NULL;
 	list_remove(&lock->lock_elem);
-	reset_donation();
+	if(!thread_mlfqs)
+	{
+		reset_donation();
+	}
   sema_up (&lock->semaphore);
 }
 
