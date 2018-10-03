@@ -525,6 +525,7 @@ thread_set_nice (int new_nice)
 {
 	thread_current()->nice = new_nice;
 	thread_calc_priority(thread_current(), NULL);
+	thread_yield();
 }
 
 /* Returns the current thread's nice value. */
