@@ -180,22 +180,6 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
-	/*
-	if(thread_mlfqs)
-	{
-		thread_current()->fp_recent_cpu = fp_int_add(thread_current()->fp_recent_cpu, 1);
-		if(ticks % TIMER_FREQ == 0)
-		{
-			calc_load_avg();
-			thread_foreach(thread_calc_recent_cpu, NULL);
-			thread_foreach(thread_calc_priority, NULL);
-		}
-		if(ticks % 4 == 3)
-		{
-			thread_calc_priority(thread_current(), NULL);
-		}
-	}
-	*/
   thread_tick ();
 }
 

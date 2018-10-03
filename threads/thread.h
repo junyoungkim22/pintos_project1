@@ -158,6 +158,5 @@ int thread_get_load_avg (void);
 void thread_calc_priority(struct thread *t, void *aux);
 void calc_load_avg(void);
 void thread_calc_recent_cpu(struct thread *t, void *aux);
-void reinsert_priority(int);
 
 #endif /* threads/thread.h */

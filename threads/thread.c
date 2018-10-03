@@ -162,35 +162,21 @@ thread_tick (void)
 	/* Wake sleeping threads that have slept enough */
 	if(current_ticks >= nearest_wake_time && nearest_wake_time != NO_WAKE_TIME)
 	{
-		//old_level = intr_disable();
 		thread_wake();
-		//intr_set_level(old_level);
 	}
 
 	if(thread_mlfqs)
 	{
-		//old_level = intr_disable();
 		thread_current()->fp_recent_cpu = fp_int_add(thread_current()->fp_recent_cpu, 1);
 		if(current_ticks % TIMER_FREQ == 0)
 		{
 			calc_load_avg();
 			thread_foreach(thread_calc_recent_cpu, NULL);
-			/*
-			thread_foreach(thread_calc_priority, NULL);
-			
-			for(int i = 0; i < 64; i++)
-			{
-				reinsert_priority(i);
-			}
-			*/
-			
 		}
 		if(current_ticks % 4 == 3)
 		{
 			thread_foreach(thread_calc_priority, NULL);
-			//thread_calc_priority(thread_current(), NULL);
 		}
-		//intr_set_level(old_level);
 	}
 
   /* Enforce preemption. */
@@ -300,16 +286,6 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
 	list_push_back(&ready_list, &t->elem);
-	/*
-	if(!thread_mlfqs) 
-	{
-  	list_push_back (&ready_list, &t->elem);
-	}
-	else
-	{
-		list_push_back (&mlfqs_ready_list[thread_get_priority()], &t->elem);
-	}
-	*/
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -382,16 +358,6 @@ thread_yield (void)
   if (cur != idle_thread) 
 	{
     list_push_back (&ready_list, &cur->elem);
-		/*
-		if(!thread_mlfqs) 
-		{
- 		 	list_push_back (&ready_list, &cur->elem);
-		}
-		else
-		{
-			list_push_back (&mlfqs_ready_list[thread_get_priority()], &cur->elem);
-		}
-		*/
 	}
   cur->status = THREAD_READY;
   schedule ();
@@ -457,7 +423,6 @@ thread_wake()
 		}
 		else
 		{
-			//list_push_front(&sleep_list, e);
 			break;
 		}
 	}
@@ -588,7 +553,6 @@ thread_calc_priority(struct thread *t, void *aux)
 {
 	(void) aux;
 	int fp_pri_max = int2fp(PRI_MAX);
-	//int fp_recent_cpu = int2fp(thread_current()->recent_cpu);
 	int fp_recent_cpu = t->fp_recent_cpu;
 	int fp_nice = int2fp(t->nice);
 	int fp_recent_cpu_div4 = fp_int_div(fp_recent_cpu, 4);
@@ -604,33 +568,12 @@ thread_calc_priority(struct thread *t, void *aux)
 		new_priority = PRI_MAX;
 	}
 	t->priority = new_priority;
-	//t->priority = fp2int(fp_sub(fp_pri_max, sub_sum));
-	//thread_yield();
-	/*
-	if(t->elem.prev != NULL && t->elem.next != NULL) {
-		list_remove(&t->elem);
-		list_push_back(&mlfqs_ready_list[t->priority], &t->elem);
-	}
-	*/
-	/*
-	if(t->status == THREAD_READY)
-	{
-		list_remove(&t->elem);
-		list_push_back(&mlfqs_ready_list[t->priority], &t->elem);
-	}
-	*/
 }
 
 void
 calc_load_avg(void)
 {
 	int ready_threads = 0;
-	/*
-	for(int i = 0; i < 64; i++)
-	{
-		ready_threads += list_size(&mlfqs_ready_list[i]);
-	}
-	*/
 	ready_threads += list_size(&ready_list);
 	if(thread_current() != idle_thread)
 	{
@@ -649,30 +592,6 @@ void thread_calc_recent_cpu(struct thread *t, void *aux)
 	t->fp_recent_cpu = fp_int_add(fp_mul(t->fp_recent_cpu, fp_mul_num), t->nice);
 }
 
-void reinsert_priority(int pri_num)
-{
-	struct list_elem *e;
-	struct list_elem *e_copy;
-	struct thread *t;
-	if(list_empty(&mlfqs_ready_list[pri_num]))
-	{
-		return;	
-	}
-	e = list_begin(&mlfqs_ready_list[pri_num]);
-	while(e != list_end(&mlfqs_ready_list[pri_num]))
-	{
-		t = list_entry(e, struct thread, elem);
-		e_copy = e;
-		e = list_next(e);
-		if(t->priority != pri_num)
-		{
-			//e_copy = e;
-			//e = list_next(e);
-			list_remove(e_copy);
-			list_push_back(&mlfqs_ready_list[t->priority], e_copy);
-		}
-	}
-}
 
 /* Idle thread.  Executes when no other thread is ready to run.
 
